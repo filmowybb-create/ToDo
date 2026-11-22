@@ -565,7 +565,45 @@ function calNav(a) {
     else c.date = U.addDays(c.date, dir * (isMobile() ? 3 : 7));
   }
   render();
+  if (a === 'next' || a === 'prev') {
+    const el = $('.week') || $('.month');
+    if (el && el.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches)
+      el.animate([{ transform: `translateX(${a === 'next' ? 48 : -48}px)`, opacity: .3 }, { transform: 'none', opacity: 1 }], { duration: 200, easing: 'ease-out' });
+  }
 }
+
+/** Przesuwanie palcem w lewo/prawo w kalendarzu zmienia okres. */
+function bindCalendarSwipe() {
+  const v = $('#view');
+  let s = null;
+  v.addEventListener('touchstart', e => {
+    if (ui.view !== 'calendar' || ui.search || e.touches.length !== 1 || e.target.closest('.cal-toolbar')) { s = null; return; }
+    const t = e.touches[0];
+    s = { x: t.clientX, y: t.clientY, t: Date.now(), lock: null };
+  }, { passive: true });
+  v.addEventListener('touchmove', e => {
+    if (!s) return;
+    const t = e.touches[0], dx = t.clientX - s.x, dy = t.clientY - s.y;
+    if (!s.lock && (Math.abs(dx) > 12 || Math.abs(dy) > 12)) s.lock = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';
+    if (s.lock === 'x') {
+      if (e.cancelable) e.preventDefault();
+      const el = $('.week') || $('.month');
+      if (el) { el.style.transform = `translateX(${dx * 0.35}px)`; el.style.opacity = String(1 - Math.min(Math.abs(dx) / 600, .4)); }
+    }
+  }, { passive: false });
+  const end = e => {
+    if (!s) return;
+    const t = e.changedTouches[0], dx = t.clientX - s.x, dy = t.clientY - s.y;
+    const el = $('.week') || $('.month');
+    if (el) { el.style.transform = ''; el.style.opacity = ''; }
+    const swipe = s.lock === 'x' && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.3 && Date.now() - s.t < 900;
+    s = null;
+    if (swipe) { suppressClick = true; setTimeout(() => suppressClick = false, 350); calNav(dx < 0 ? 'next' : 'prev'); }
+  };
+  v.addEventListener('touchend', end);
+  v.addEventListener('touchcancel', () => { const el = $('.week') || $('.month'); if (el) { el.style.transform = ''; el.style.opacity = ''; } s = null; });
+}
+let suppressClick = false;
 
 function showEvent(ev) {
   const when = ev.allDay
@@ -982,6 +1020,7 @@ function bindListTools() {
 function bindView() {
   const v = $('#view');
   v.addEventListener('click', e => {
+    if (suppressClick) { e.stopPropagation(); return; }
     const tg = e.target.closest('[data-tag]');
     if (tg && !e.target.closest('#detail')) { e.stopPropagation(); return setView('tag', tg.dataset.tag); }
     const kb = e.target.closest('[data-kb]');
@@ -1072,6 +1111,7 @@ function bindGlobal() {
     if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'n') { e.preventDefault(); $('#qaInput').focus(); }
     if (e.key === '/') { e.preventDefault(); s.focus(); }
+    if (ui.view === 'calendar' && !ui.search && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) { e.preventDefault(); calNav(e.key === 'ArrowRight' ? 'next' : 'prev'); }
   });
   addEventListener('popstate', () => { if (ui.sel) closeDetail(true); });
   addEventListener('online', () => syncNow(false));
@@ -1103,7 +1143,7 @@ function handleShare() {
 async function start() {
   await Store.load();
   applyTheme();
-  bindGlobal(); bindView(); bindDetail();
+  bindGlobal(); bindView(); bindDetail(); bindCalendarSwipe();
   setQaType('task');
   Store.on(kind => {
     if (kind === 'items' || kind === 'lists' || kind === 'merge') render();
