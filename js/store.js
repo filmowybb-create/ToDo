@@ -60,6 +60,7 @@ const Store = (() => {
       state.items = saved.items || {};
       state.lists = saved.lists || {};
       state.settings = { ...DEFAULT_SETTINGS, ...(saved.settings || {}) };
+      if (!state.settings.clientId) state.settings.clientId = DEFAULT_SETTINGS.clientId;
       state.local = { ...state.local, ...(saved.local || {}) };
     }
     if (!Object.values(state.lists).some(l => !l.deleted)) {
