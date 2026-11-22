@@ -7,7 +7,7 @@ const Store = (() => {
   const listeners = new Set();
 
   const DEFAULT_SETTINGS = {
-    clientId: '',            // OAuth Client ID z Google Cloud
+    clientId: '842853255553-pocp3184gghftlifk37u9gahcnjf92f6.apps.googleusercontent.com', // OAuth Client ID z Google Cloud
     googleOn: false,
     showCalendars: ['primary'],
     taskCalendarId: '',      // kalendarz "Zadania" tworzony automatycznie

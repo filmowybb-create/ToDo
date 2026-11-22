@@ -1,5 +1,5 @@
 /* Zadania – service worker: działanie offline i obsługa kliknięć w powiadomienia */
-const CACHE = 'zadania-v1';
+const CACHE = 'zadania-v2';
 const SHELL = ['./', 'index.html', 'css/app.css', 'js/util.js', 'js/store.js', 'js/google.js', 'js/app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', e => {
