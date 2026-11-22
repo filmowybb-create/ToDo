@@ -21,6 +21,10 @@
         <div class="side-head"><span>Listy</span><button class="icon-btn sm" id="addList" title="Nowa lista" aria-label="Nowa lista"></button></div>
         <nav id="listsNav"></nav>
       </div>
+      <div class="side-section" id="tagsSec" hidden>
+        <div class="side-head"><span>Tagi</span></div>
+        <nav id="tagsNav"></nav>
+      </div>
       <div class="side-foot">
         <button class="sync-status" id="syncStatus" title="Synchronizuj teraz"></button>
         <button class="nav-btn" id="openSettings"></button>
@@ -31,7 +35,7 @@
       <header class="topbar">
         <button class="icon-btn" id="menuBtn" aria-label="Menu"></button>
         <h1 id="viewTitle">Dziś</h1>
-        <div class="search"><span class="search-ico"></span><input id="search" type="search" placeholder="Szukaj" autocomplete="off"></div>
+        <div class="search"><span class="search-ico"></span><input id="search" type="search" placeholder="Szukaj lub #tag" autocomplete="off"></div>
         <div id="viewTools" class="view-tools"></div>
       </header>
       <div id="banner"></div>

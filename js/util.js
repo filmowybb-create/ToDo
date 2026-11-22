@@ -105,7 +105,7 @@ const U = (() => {
     [/^(śr|sr|środ[aęy]|srod[aey])$/, 3], [/^(czw|cz|czwart(ek|ku))$/, 4], [/^(pt|pi[aą]t(ek|ku)?)$/, 5], [/^(sob|sb|sobot[aęy])$/, 6],
   ];
   function parseQuick(text, lists = []) {
-    const out = { type: 'task', title: '', due: null, time: null, duration: null, starred: false, recurrence: '', listId: null };
+    const out = { type: 'task', tags: [], title: '', due: null, time: null, duration: null, starred: false, recurrence: '', listId: null };
     let s = ' ' + text.trim() + ' ';
     const take = (re, fn) => { s = s.replace(re, (...a) => { fn(...a); return ' '; }); };
 
@@ -117,9 +117,10 @@ const U = (() => {
     take(/\s(co\s+miesi[aą]c)(?=\s)/i, () => out.recurrence = 'monthly');
     take(/\s(co\s+rok)(?=\s)/i, () => out.recurrence = 'yearly');
     take(/\s!(?=\s)/, () => out.starred = true);
-    take(/\s#([\p{L}\d_-]+)(?=\s)/u, (_, name) => {
+    take(/\s#([\p{L}\d_-]+)(?=\s)/gu, (_, name) => {
       const l = lists.find(l => l.name.toLowerCase() === name.toLowerCase());
-      if (l) out.listId = l.id;
+      if (l && !out.listId) out.listId = l.id;
+      else { const t = normTag(name); if (t && !out.tags.includes(t)) out.tags.push(t); }
     });
     // godzina: 15:00, o 15, o 9:30
     take(/\s(?:o\s+)?([01]?\d|2[0-3]):([0-5]\d)(?=\s)/, (_, h, m) => out.time = `${pad(+h)}:${m}`);
@@ -156,12 +157,16 @@ const U = (() => {
     return out;
   }
 
+  const normTag = s => String(s || '').trim().replace(/^#+/, '').replace(/\s+/g, '-').toLowerCase();
+  /** Stały kolor dla tagu. */
+  function tagHue(t) { let h = 0; for (const c of t) h = (h * 31 + c.codePointAt(0)) % 360; return h; }
+
   function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function linkify(s) {
     return esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g, '<br>');
   }
   function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
-  return { uid, pad, dateStr, todayStr, parseDate, addDays, addMonths, diffDays, weekStart, fmtDate, fmtDur, parseDur, timeToMin, minToTime, startOf, nextDue, REC_LABELS, parseQuick, esc, linkify, debounce, cap, DAYS, DAYS_SHORT, MONTHS, MONTHS_NOM };
+  return { normTag, tagHue, uid, pad, dateStr, todayStr, parseDate, addDays, addMonths, diffDays, weekStart, fmtDate, fmtDur, parseDur, timeToMin, minToTime, startOf, nextDue, REC_LABELS, parseQuick, esc, linkify, debounce, cap, DAYS, DAYS_SHORT, MONTHS, MONTHS_NOM };
 })();
 if (typeof module !== 'undefined') module.exports = U;

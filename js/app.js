@@ -32,6 +32,8 @@ const P = {
   ext: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3',
   swap: 'M7 16V4M3 8l4-4 4 4M17 8v12M21 16l-4 4-4-4',
   chevd: 'm6 9 6 6 6-6',
+  kanban: 'M4 3h4v18H4zM10 3h4v12h-4zM16 3h4v8h-4z',
+  tag: 'M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01',
   down: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3',
   up: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
   google: 'M21.8 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.5a4.7 4.7 0 0 1-2 3.1v2.5h3.3c1.9-1.8 3-4.4 3-7.5zM12 22c2.7 0 5-.9 6.7-2.4l-3.3-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3v2.6A10 10 0 0 0 12 22zM6.4 14a6 6 0 0 1 0-3.9V7.4H3a10 10 0 0 0 0 9.1zM12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3 7.4l3.4 2.6C7.2 7.7 9.4 5.9 12 5.9z',
@@ -42,6 +44,7 @@ const ic = (n, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidd
 const ui = {
   view: 'today', listId: null, sel: null, search: '', qaType: 'task',
   cal: { mode: 'week', date: U.todayStr() },
+  kb: { group: 'status', list: '', tag: '' }, tag: null,
   ev: { key: '', at: 0, list: [], loading: false },
   sync: { status: 'off', msg: '' },
 };
@@ -51,6 +54,7 @@ const VIEWS = {
   today: { title: 'Dziś', icon: 'sun' },
   upcoming: { title: 'Nadchodzące', icon: 'upcoming' },
   calendar: { title: 'Kalendarz', icon: 'calendar' },
+  kanban: { title: 'Tablica', icon: 'kanban' },
   starred: { title: 'Ważne', icon: 'star' },
   all: { title: 'Wszystkie zadania', icon: 'all' },
   notes: { title: 'Notatki', icon: 'note' },
@@ -69,7 +73,14 @@ function cmpTask(a, b) {
 }
 const listName = id => (Store.state.lists[id] || {}).name || '';
 const listColor = id => (Store.state.lists[id] || {}).color || '#94a3b8';
-function matches(it, q) { q = q.toLowerCase(); return (it.title || '').toLowerCase().includes(q) || (it.body || '').toLowerCase().includes(q); }
+function matches(it, q) {
+  q = q.toLowerCase().trim();
+  const tags = it.tags || [];
+  if (q.startsWith('#')) { const want = q.split(/\s+/).map(U.normTag).filter(Boolean); return want.every(w => tags.some(t => t.startsWith(w))); }
+  return (it.title || '').toLowerCase().includes(q) || (it.body || '').toLowerCase().includes(q) || tags.some(t => t.includes(q));
+}
+const tagChip = t => `<span class="tag" style="--th:${U.tagHue(t)}" data-tag="${esc(t)}">#${esc(t)}</span>`;
+const STATUS = [['todo', 'Do zrobienia'], ['doing', 'W toku'], ['done', 'Zrobione']];
 
 function toast(msg, action, fn, ms = 3500) {
   const t = document.createElement('div');
@@ -142,6 +153,9 @@ function renderNav() {
     const n = T.filter(i => i.listId === l.id).length;
     return `<button class="nav-btn ${ui.view === 'list' && ui.listId === l.id ? 'active' : ''}" data-list="${l.id}"><span class="dot" style="background:${esc(l.color)}"></span><span>${esc(l.name)}</span>${n ? `<span class="count">${n}</span>` : ''}</button>`;
   }).join('');
+  const tg = Store.tags();
+  $('#tagsSec').hidden = !tg.length;
+  $('#tagsNav').innerHTML = tg.map(([t, n]) => `<button class="nav-btn ${ui.view === 'tag' && ui.tag === t ? 'active' : ''}" data-tagnav="${esc(t)}"><span class="hash" style="--th:${U.tagHue(t)}">#</span><span>${esc(t)}</span><span class="count">${n}</span></button>`).join('');
   renderSyncStatus();
 }
 
@@ -167,7 +181,7 @@ function renderSyncStatus() {
 }
 
 function setView(v, listId = null) {
-  ui.view = v; ui.listId = listId; ui.search = ''; $('#search').value = ''; $('.search').classList.remove('has');
+  ui.view = v; ui.listId = v === 'list' ? listId : null; ui.tag = v === 'tag' ? listId : null; ui.search = ''; $('#search').value = ''; $('.search').classList.remove('has');
   document.body.classList.remove('menu-open');
   if (v === 'notes') setQaType('note'); else if (ui.qaType === 'note' && v !== 'list') setQaType('task');
   render(); $('#view').scrollTop = 0;
@@ -180,7 +194,7 @@ let lastViewKey = '';
 function render() {
   renderNav();
   const v = $('#view');
-  const key = ui.view + (ui.listId || '') + ui.search;
+  const key = ui.view + (ui.listId || '') + (ui.tag || '') + ui.search;
   const keep = key === lastViewKey ? v.scrollTop : 0;
   const weekScroll = $('.wk-scroll') ? $('.wk-scroll').scrollTop : null;
   lastViewKey = key;
@@ -194,6 +208,15 @@ function render() {
     case 'starred': title = 'Ważne'; html = viewSimple(tasks().filter(i => i.starred && !i.done), 'Oznacz zadanie gwiazdką, żeby trafiło tutaj.', 'star'); break;
     case 'all': title = 'Wszystkie zadania'; html = viewAll(); break;
     case 'notes': title = 'Notatki'; html = viewNotes(notes()); break;
+    case 'kanban': title = 'Tablica'; html = viewKanban(); break;
+    case 'tag': {
+      title = '#' + ui.tag;
+      const T = tasks().filter(i => (i.tags || []).includes(ui.tag));
+      const N = notes().filter(i => (i.tags || []).includes(ui.tag));
+      const open = T.filter(i => !i.done).sort(cmpTask), done = T.filter(i => i.done);
+      html = (open.length ? open.map(i => rowHtml(i)).join('') : (!N.length && !done.length ? empty('Nic nie ma tego tagu.', 'tag') : '')) + doneGroup(done) + (N.length ? group('Notatki', notesGrid(N)) : '');
+      break;
+    }
     case 'done': title = 'Ukończone'; html = viewDone(); break;
     case 'list': {
       const l = Store.state.lists[ui.listId];
@@ -210,6 +233,9 @@ function render() {
   v.scrollTop = keep;
   if (ui.view === 'calendar' && !ui.search) afterCalendar(weekScroll);
   bindListTools();
+  const kl = $('#kbList'), kt = $('#kbTag');
+  if (kl) kl.onchange = () => { ui.kb.list = kl.value; render(); };
+  if (kt) kt.onchange = () => { ui.kb.tag = kt.value; render(); };
 }
 
 const rowHtml = (it, opts = {}) => {
@@ -225,6 +251,8 @@ const rowHtml = (it, opts = {}) => {
   if (it.recurrence) meta.push(`<span title="${esc(U.REC_LABELS[it.recurrence])}">${ic('repeat')}</span>`);
   if (it.reminder != null && !it.done) meta.push(`<span title="Przypomnienie">${ic('bell')}</span>`);
   if (it.body) meta.push(`<span title="Ma notatkę">${ic('note')}</span>`);
+  if (!it.done && it.status === 'doing') meta.push(`<span class="st-doing">W toku</span>`);
+  for (const t of it.tags || []) meta.push(tagChip(t));
   return `<div class="row ${it.done ? 'done' : ''} ${ui.sel === it.id ? 'sel' : ''}" data-id="${it.id}">
     <button class="check" data-act="toggle" aria-label="${it.done ? 'Oznacz jako nieukończone' : 'Ukończ'}">${ic('check')}</button>
     <div class="r-main"><div class="r-title">${esc(it.title) || '<i style="color:var(--muted)">(bez tytułu)</i>'}</div>${meta.length ? `<div class="r-meta">${meta.join('')}</div>` : ''}</div>
@@ -314,6 +342,7 @@ function notesGrid(list) {
     ${n.starred ? `<span class="pin">${ic('star')}</span>` : ''}
     <h3>${esc(n.title) || '<i style="color:var(--muted)">(bez tytułu)</i>'}</h3>
     ${n.body ? `<div class="body">${esc(n.body)}</div>` : ''}
+    ${(n.tags || []).length ? `<div class="r-meta">${n.tags.map(tagChip).join('')}</div>` : ''}
     <div class="foot"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:${esc(listColor(n.listId))}"></span>${esc(listName(n.listId))}<span style="margin-left:auto">${new Date(n.updatedAt).toLocaleDateString('pl-PL')}</span></div></div>`).join('')}</div>`;
 }
 function viewNotes(list) {
@@ -326,6 +355,72 @@ function viewSearch() {
   const N = notes().filter(i => matches(i, q));
   if (!T.length && !N.length) return empty(`Nic nie znaleziono dla „${q}”.`, 'search');
   return (T.length ? group(`Zadania (${T.length})`, T.map(i => rowHtml(i)).join('')) : '') + (N.length ? group(`Notatki (${N.length})`, notesGrid(N)) : '');
+}
+
+/* =================================================================
+   TABLICA (KANBAN)
+   ================================================================= */
+function kanbanMove(id, st) {
+  const it = Store.get(id); if (!it) return;
+  const prev = Store.statusOf(it); if (prev === st) return;
+  const nextId = Store.setStatus(id, st);
+  if (st === 'done') toast(nextId ? 'Zrobione – następne: ' + U.fmtDate(Store.get(nextId).due).toLowerCase() : 'Zrobione', 'Cofnij', () => { Store.setStatus(id, prev); if (nextId) Store.remove(nextId); });
+  if (ui.sel === id) renderDetail();
+}
+function kanbanAction(b) {
+  const a = b.dataset.kb;
+  if (a === 'group') { ui.kb.group = b.dataset.v; return render(); }
+  if (a === 'move') { const id = b.closest('[data-id]').dataset.id; return kanbanMove(id, b.dataset.v); }
+  if (a === 'add') {
+    const d = { tags: ui.kb.tag ? [ui.kb.tag] : [] };
+    if (ui.kb.group === 'status') { d.status = b.dataset.v; if (ui.kb.list) d.listId = ui.kb.list; } else d.listId = b.dataset.v;
+    const it = Store.newItem(d);
+    if (d.status === 'done') Store.setStatus(it.id, 'done');
+    openDetail(it.id); renderDetail(true);
+  }
+}
+function kcard(it, st) {
+  const t = U.todayStr(), meta = [];
+  if (it.due) meta.push(`<span class="${!it.done && it.due < t ? 'late' : it.due === t ? 'tod' : ''}">${ic('calendar')}${U.fmtDate(it.due)}${it.time ? ' ' + it.time : ''}</span>`);
+  if (it.duration) meta.push(`<span>${ic('dur')}${U.fmtDur(it.duration)}</span>`);
+  if (it.recurrence) meta.push(`<span>${ic('repeat')}</span>`);
+  if (ui.kb.group === 'status' && !ui.kb.list) meta.push(`<span><span class="dot" style="width:7px;height:7px;border-radius:50%;background:${esc(listColor(it.listId))}"></span>${esc(listName(it.listId))}</span>`);
+  for (const tg of it.tags || []) meta.push(tagChip(tg));
+  const idx = STATUS.findIndex(([k]) => k === st);
+  const mv = ui.kb.group === 'status' ? `<div class="kmove">${idx > 0 ? `<button data-kb="move" data-v="${STATUS[idx - 1][0]}" title="Do: ${STATUS[idx - 1][1]}">${ic('left')}</button>` : '<span></span>'}${idx < 2 ? `<button data-kb="move" data-v="${STATUS[idx + 1][0]}" title="Do: ${STATUS[idx + 1][1]}">${ic('right')}</button>` : ''}</div>` : '';
+  return `<div class="kcard ${it.done ? 'done' : ''} ${ui.sel === it.id ? 'sel' : ''}" data-id="${it.id}" draggable="true">
+    <div class="kc-top"><span class="r-title">${it.starred ? `<span class="kstar">${ic('star')}</span>` : ''}${esc(it.title) || '<i style="color:var(--muted)">(bez tytułu)</i>'}</span></div>
+    ${meta.length ? `<div class="r-meta">${meta.join('')}</div>` : ''}${mv}</div>`;
+}
+function viewKanban() {
+  const K = ui.kb;
+  if (K.list && !Store.state.lists[K.list]) K.list = '';
+  let T = tasks();
+  if (K.tag) T = T.filter(i => (i.tags || []).includes(K.tag));
+  if (K.group === 'status' && K.list) T = T.filter(i => i.listId === K.list);
+  const tagOpts = Store.tags().map(([t]) => `<option value="${esc(t)}" ${t === K.tag ? 'selected' : ''}>#${esc(t)}</option>`).join('');
+  const bar = `<div class="cal-toolbar kb-bar">
+    <div class="seg"><button data-kb="group" data-v="status" class="${K.group === 'status' ? 'on' : ''}">Status</button><button data-kb="group" data-v="list" class="${K.group === 'list' ? 'on' : ''}">Listy</button></div>
+    ${K.group === 'status' ? `<select class="inp sm" id="kbList"><option value="">Wszystkie listy</option>${Store.lists().map(l => `<option value="${l.id}" ${l.id === K.list ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select>` : ''}
+    <select class="inp sm" id="kbTag"><option value="">Wszystkie tagi</option>${tagOpts}</select></div>`;
+  const weekAgo = Date.now() - 14 * 86400000;
+  const cols = K.group === 'status'
+    ? STATUS.map(([k, title]) => {
+      let L = T.filter(i => Store.statusOf(i) === k);
+      let hidden = 0;
+      if (k === 'done') { L.sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)); const all = L.length; L = L.filter(i => (i.doneAt || 0) > weekAgo); hidden = all - L.length; } else L.sort(cmpTask);
+      return { key: k, title, list: L, hidden, color: { todo: '#94a3b8', doing: '#f59e0b', done: '#16a34a' }[k] };
+    })
+    : Store.lists().map(l => ({ key: l.id, title: l.name, color: l.color, list: T.filter(i => !i.done && i.listId === l.id).sort(cmpTask), hidden: 0 }));
+  const html = cols.map(c => {
+    const mins = c.list.reduce((s, i) => s + (i.duration || 0), 0);
+    return `<section class="kcol" data-kdrop="${esc(c.key)}">
+      <header class="kcol-h"><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${esc(c.color)}"></span><b>${esc(c.title)}</b><span class="count">${c.list.length}</span>${mins && c.key !== 'done' ? `<span class="kmins">${U.fmtDur(mins)}</span>` : ''}</header>
+      <div class="kcards">${c.list.map(i => kcard(i, Store.statusOf(i))).join('') || '<div class="kempty">Przeciągnij tu zadanie</div>'}
+      ${c.hidden ? `<div class="kempty">+${c.hidden} starszych w „Ukończone”</div>` : ''}</div>
+      <button class="kadd" data-kb="add" data-v="${esc(c.key)}">${ic('plus')}Dodaj</button></section>`;
+  }).join('');
+  return bar + `<div class="kanban">${html}</div>`;
 }
 
 /* =================================================================
@@ -546,6 +641,11 @@ function renderDetail(focusTitle) {
       </div>
       <div class="field"><label for="dRem">Przypomnienie</label><select class="inp" id="dRem" ${it.due ? '' : 'disabled'}>${reminderOptions(it)}</select></div>
       <div class="field"><label for="dRec">Powtarzanie</label><select class="inp" id="dRec" ${it.due ? '' : 'disabled'}>${Object.entries(U.REC_LABELS).map(([k, v]) => `<option value="${k}" ${k === (it.recurrence || '') ? 'selected' : ''}>${v}</option>`).join('')}</select></div>` : ''}
+      ${!isNote ? `<div class="field"><label for="dStatus">Status</label><select class="inp" id="dStatus">${STATUS.map(([k, l]) => `<option value="${k}" ${k === Store.statusOf(it) ? 'selected' : ''}>${l}</option>`).join('')}</select></div>` : ''}
+      <div class="field"><label for="dTag">Tagi</label>
+        <div class="tag-edit">${(it.tags || []).map(t => `<span class="tag" style="--th:${U.tagHue(t)}">#${esc(t)}<button data-f="untag" data-v="${esc(t)}" aria-label="Usuń tag ${esc(t)}">×</button></span>`).join('')}
+          <input id="dTag" list="tagList" placeholder="${(it.tags || []).length ? 'dodaj…' : 'Dodaj tag i Enter'}" autocomplete="off" enterkeyhint="done"></div>
+        <datalist id="tagList">${Store.tags().filter(([t]) => !(it.tags || []).includes(t)).map(([t]) => `<option value="${esc(t)}">`).join('')}</datalist></div>
       <div class="field"><label for="dList">Lista</label><select class="inp" id="dList">${Store.lists().map(l => `<option value="${l.id}" ${l.id === it.listId ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>
       <div class="field"><label for="dBody">${isNote ? 'Treść' : 'Notatka do zadania'}</label><textarea class="inp body-inp" id="dBody" placeholder="${isNote ? 'Pisz…' : 'Szczegóły, linki…'}">${esc(it.body)}</textarea></div>
     </div>
@@ -573,7 +673,13 @@ function bindDetail() {
     if (e.target.id === 'dTitle') saveTitle(ui.sel, e.target.value);
     if (e.target.id === 'dBody') saveBody(ui.sel, e.target.value);
   });
-  d.addEventListener('keydown', e => { if (e.target.id === 'dTitle' && e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+  d.addEventListener('keydown', e => {
+    if (e.target.id === 'dTitle' && e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+    if (e.target.id === 'dTag') {
+      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(e.target.value); }
+      if (e.key === 'Backspace' && !e.target.value) { const it = Store.get(ui.sel); if (it && (it.tags || []).length) { detailPatch({ tags: it.tags.slice(0, -1) }); $('#dTag').focus(); } }
+    }
+  });
   d.addEventListener('change', e => {
     const it = Store.get(ui.sel); if (!it) return;
     const S = Store.settings;
@@ -595,6 +701,8 @@ function bindDetail() {
       case 'dRem': detailPatch({ reminder: e.target.value === '' ? null : +e.target.value }, false); break;
       case 'dRec': detailPatch({ recurrence: e.target.value }, false); break;
       case 'dList': detailPatch({ listId: e.target.value }, false); break;
+      case 'dStatus': Store.setStatus(it.id, e.target.value); renderDetail(); break;
+      case 'dTag': addTag(e.target.value); break;
     }
   });
   d.addEventListener('click', async e => {
@@ -605,6 +713,7 @@ function bindDetail() {
       case 'star': detailPatch({ starred: !it.starred }); break;
       case 'done': Store.toggleDone(it.id); renderDetail(); break;
       case 'qd': setDue(it, b.dataset.v || null); break;
+      case 'untag': detailPatch({ tags: (it.tags || []).filter(t => t !== b.dataset.v) }); break;
       case 'type': if (b.dataset.v !== it.type) detailPatch({ type: b.dataset.v }); break;
       case 'delete': {
         Store.remove(it.id);
@@ -615,6 +724,13 @@ function bindDetail() {
       }
     }
   });
+}
+function addTag(raw) {
+  const it = Store.get(ui.sel); if (!it) return;
+  const add = String(raw).split(/[,\s]+/).map(U.normTag).filter(Boolean);
+  const tags = [...new Set([...(it.tags || []), ...add])];
+  if (tags.length !== (it.tags || []).length) detailPatch({ tags });
+  const inp = $('#dTag'); if (inp) { inp.value = ''; inp.focus(); }
 }
 function setDue(it, due) {
   const p = { due };
@@ -643,6 +759,7 @@ function qaPreview() {
   if (p.recurrence) c.push(`${ic('repeat')}${U.REC_LABELS[p.recurrence]}`);
   if (p.starred) c.push(`${ic('star')}ważne`);
   if (p.listId) c.push(esc(listName(p.listId)));
+  for (const t of p.tags) c.push('#' + esc(t));
   el.innerHTML = c.map(x => `<span class="chip">${x.replace(/class="i /g, 'style="width:12px;height:12px" class="i ')}</span>`).join('');
 }
 function quickAdd(e) {
@@ -653,17 +770,23 @@ function quickAdd(e) {
   const explicitNote = /^\s*(n|notatka|note)\s*:/i.test(text);
   let data;
   if (ui.qaType === 'note' || explicitNote) {
-    data = { type: 'note', title: text.replace(/^\s*(n|notatka|note)\s*:\s*/i, '') };
+    const p = U.parseQuick(text.replace(/^\s*(n|notatka|note)\s*:\s*/i, ''), Store.lists());
+    data = { type: 'note', title: p.tags.length ? text.replace(/^\s*(n|notatka|note)\s*:\s*/i, '').replace(/(^|\s)#[\p{L}\d_-]+/gu, ' ').replace(/\s+/g, ' ').trim() : text.replace(/^\s*(n|notatka|note)\s*:\s*/i, ''), tags: p.tags };
+    if (p.listId) data.listId = p.listId;
   } else {
     const p = U.parseQuick(text, Store.lists());
-    data = { type: 'task', title: p.title, due: p.due, time: p.time, duration: p.duration, starred: p.starred, recurrence: p.recurrence };
+    data = { type: 'task', tags: p.tags, title: p.title, due: p.due, time: p.time, duration: p.duration, starred: p.starred, recurrence: p.recurrence };
     if (p.listId) data.listId = p.listId;
     if (!data.due && (ui.view === 'today' || ui.view === 'calendar') && !ui.search) data.due = U.todayStr();
     if (ui.view === 'starred') data.starred = true;
+    if (ui.view === 'kanban' && ui.kb.group === 'list' && !p.listId) data.listId = ui.kb.list || undefined;
     if (data.time) data.reminder = S.defaultReminder;
     if (!data.due) data.recurrence = '';
   }
   if (!data.listId && ui.view === 'list') data.listId = ui.listId;
+  if (!data.listId) delete data.listId;
+  if (ui.view === 'tag' && !data.tags.includes(ui.tag)) data.tags.push(ui.tag);
+  if (ui.view === 'kanban' && ui.kb.tag && !data.tags.includes(ui.kb.tag)) data.tags.push(ui.kb.tag);
   const it = Store.newItem(data);
   inp.value = ''; qaPreview();
   toast(it.type === 'note' ? 'Dodano notatkę' : `Dodano${it.due ? ' na ' + U.fmtDate(it.due).toLowerCase() : ''}`, 'Otwórz', () => openDetail(it.id));
@@ -843,6 +966,10 @@ function bindListTools() {
 function bindView() {
   const v = $('#view');
   v.addEventListener('click', e => {
+    const tg = e.target.closest('[data-tag]');
+    if (tg && !e.target.closest('#detail')) { e.stopPropagation(); return setView('tag', tg.dataset.tag); }
+    const kb = e.target.closest('[data-kb]');
+    if (kb) { e.stopPropagation(); return kanbanAction(kb); }
     const act = e.target.closest('[data-act]');
     if (act) {
       e.stopPropagation();
@@ -876,9 +1003,16 @@ function bindView() {
 
   // Przeciąganie zadań w kalendarzu
   v.addEventListener('dragstart', e => { const el = e.target.closest('[draggable][data-id]'); if (!el) return; e.dataTransfer.setData('text/plain', el.dataset.id); e.dataTransfer.effectAllowed = 'move'; });
-  v.addEventListener('dragover', e => { const t = e.target.closest('[data-drop]'); if (!t) return; e.preventDefault(); $$('.drop', v).forEach(x => x !== t && x.classList.remove('drop')); t.classList.add('drop'); });
+  v.addEventListener('dragover', e => { const t = e.target.closest('[data-kdrop]') || e.target.closest('[data-drop]'); if (!t) return; e.preventDefault(); $$('.drop', v).forEach(x => x !== t && x.classList.remove('drop')); t.classList.add('drop'); });
   v.addEventListener('dragleave', e => { const t = e.target.closest('[data-drop]'); if (t && !t.contains(e.relatedTarget)) t.classList.remove('drop'); });
   v.addEventListener('drop', e => {
+    const k = e.target.closest('[data-kdrop]');
+    if (k) {
+      e.preventDefault(); k.classList.remove('drop');
+      const id = e.dataTransfer.getData('text/plain'); if (!Store.get(id)) return;
+      if (ui.kb.group === 'status') kanbanMove(id, k.dataset.kdrop); else Store.update(id, { listId: k.dataset.kdrop });
+      return;
+    }
     const t = e.target.closest('[data-drop]'); if (!t) return;
     e.preventDefault();
     const id = e.dataTransfer.getData('text/plain'), it = Store.get(id); if (!it) return;
@@ -897,6 +1031,7 @@ function bindView() {
 function bindGlobal() {
   $('#nav').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b) setView(b.dataset.view); });
   $('#listsNav').addEventListener('click', e => { const b = e.target.closest('[data-list]'); if (b) setView('list', b.dataset.list); });
+  $('#tagsNav').addEventListener('click', e => { const b = e.target.closest('[data-tagnav]'); if (b) setView('tag', b.dataset.tagnav); });
   $('#addList').innerHTML = ic('plus');
   $('#addList').onclick = async () => {
     const n = await askText('Nowa lista', '');

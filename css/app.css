@@ -176,6 +176,46 @@ textarea.inp { resize: vertical; min-height: 120px; line-height: 1.5; }
 .now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--danger); z-index: 3; pointer-events: none; }
 .now-line::before { content: ''; position: absolute; left: -4px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
 
+/* ---------- Tagi ---------- */
+.tag { --th: 220; display: inline-flex; align-items: center; gap: 2px; font-size: 11.5px; font-weight: 600; padding: 0 7px; border-radius: 99px; line-height: 18px; background: hsl(var(--th) 70% 50% / .14); color: hsl(var(--th) 55% 40%); cursor: pointer; white-space: nowrap; }
+:root[data-theme="dark"] .tag { color: hsl(var(--th) 70% 72%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tag { color: hsl(var(--th) 70% 72%); } }
+.tag button { font-size: 14px; line-height: 1; padding: 0 0 0 3px; color: inherit; opacity: .7; } .tag button:hover { opacity: 1; }
+.tag-edit { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; min-height: 38px; }
+.tag-edit:focus-within { border-color: var(--accent); }
+.tag-edit .tag { font-size: 12.5px; line-height: 22px; cursor: default; }
+.tag-edit input { flex: 1; min-width: 90px; border: 0; outline: none; background: transparent; padding: 2px; }
+.hash { --th: 220; width: 20px; text-align: center; font-weight: 700; color: hsl(var(--th) 60% 50%); }
+.st-doing { color: #b45309; font-weight: 600; }
+
+/* ---------- Tablica ---------- */
+.inp.sm { width: auto; min-height: 34px; padding: 5px 8px; font-size: 14px; }
+.kanban { display: flex; gap: 12px; overflow-x: auto; align-items: flex-start; height: calc(100dvh - 205px); min-height: 380px; padding-bottom: 6px; scroll-snap-type: x proximity; }
+.kcol { flex: 0 0 300px; max-height: 100%; display: flex; flex-direction: column; background: var(--panel2); border-radius: 12px; border: 1px solid var(--line); scroll-snap-align: start; }
+.kcol.drop { outline: 2px dashed var(--accent); outline-offset: -2px; background: var(--accent-soft); }
+.kcol-h { display: flex; align-items: center; gap: 8px; padding: 10px 12px 6px; font-size: 14px; }
+.kcol-h .count { font-size: 12px; color: var(--muted); background: var(--panel); border-radius: 99px; padding: 0 7px; }
+.kmins { margin-left: auto; font-size: 12px; color: var(--muted); }
+.kcards { overflow-y: auto; padding: 4px 8px; flex: 1; min-height: 50px; }
+.kcard { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 9px 10px; margin-bottom: 8px; cursor: grab; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+.kcard:hover { box-shadow: 0 3px 10px rgba(16,24,40,.08); }
+.kcard.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.kcard.done .r-title { text-decoration: line-through; color: var(--muted); }
+.kcard .r-title { font-size: 14.5px; }
+.kstar svg { width: 14px; height: 14px; fill: var(--star); stroke: var(--star); margin-right: 4px; vertical-align: -2px; }
+.kmove { display: flex; justify-content: space-between; margin-top: 6px; opacity: 0; transition: opacity .15s; }
+.kcard:hover .kmove { opacity: 1; }
+.kcard { position: relative; }
+@media (hover: hover) { .kmove { position: absolute; right: 6px; bottom: 6px; margin: 0; gap: 4px; } .kmove button { background: var(--panel); } }
+@media (hover: none) { .kmove { opacity: 1; } }
+.kmove button { width: 30px; height: 26px; border-radius: 6px; color: var(--muted); display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); }
+.kmove button:hover { color: var(--accent); border-color: var(--accent); }
+.kmove svg { width: 16px; height: 16px; }
+.kempty { color: var(--muted); font-size: 13px; text-align: center; padding: 14px 6px; border: 1px dashed var(--line); border-radius: 8px; margin-bottom: 8px; }
+.kadd { display: flex; align-items: center; gap: 6px; margin: 2px 8px 8px; padding: 7px 8px; border-radius: 8px; color: var(--muted); font-size: 14px; }
+.kadd:hover { background: var(--panel); color: var(--accent); }
+.kadd svg { width: 16px; height: 16px; }
+
 /* ---------- Okna modalne i komunikaty ---------- */
 .modal-wrap { position: fixed; inset: 0; background: rgba(10, 12, 18, .45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
 .modal { background: var(--panel); border-radius: 14px; box-shadow: var(--shadow); width: min(560px, 100%); max-height: 90dvh; display: flex; flex-direction: column; }
@@ -222,6 +262,9 @@ textarea.inp { resize: vertical; min-height: 120px; line-height: 1.5; }
   .month .dow { padding: 4px; font-size: 11px; text-align: center; }
   .week { height: calc(100dvh - 190px); }
   .notes-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kanban { height: calc(100dvh - 190px); scroll-snap-type: x mandatory; }
+  .kcol { flex-basis: 84vw; }
+  .kb-bar { flex-wrap: wrap !important; }
   .cal-toolbar { gap: 4px; flex-wrap: nowrap; }
   .cal-toolbar h2 { min-width: 0; font-size: 14.5px; margin: 0 2px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cal-toolbar .seg button { padding: 6px 8px; font-size: 13px; }

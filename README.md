@@ -6,7 +6,9 @@ Aplikacja do zadań i notatek z kalendarzem. Działa na Windows i Androidzie jak
 
 - **Zadania** z terminem, godziną, czasem trwania, przypomnieniem, powtarzaniem, gwiazdką i notatką.
 - **Notatki** jako osobny typ. Każdy element jest zadaniem albo notatką i można go przełączyć jednym kliknięciem.
-- **Widoki:** Dziś (z sumą zaplanowanego czasu), Nadchodzące, Kalendarz (tydzień / miesiąc, na telefonie 3 dni), Ważne, Wszystkie, Notatki, Ukończone, własne listy, wyszukiwarka.
+- **Widoki:** Dziś (z sumą zaplanowanego czasu), Nadchodzące, Kalendarz (tydzień / miesiąc, na telefonie 3 dni), Tablica (kanban), Ważne, Wszystkie, Notatki, Ukończone, własne listy, tagi, wyszukiwarka.
+- **Tagi** dla zadań i notatek: `#tag` przy dodawaniu albo pole „Tagi” w szczegółach. Kliknięcie tagu pokazuje wszystko z tym tagiem, a w wyszukiwarce `#pra` znajduje tagi zaczynające się od „pra”, `#praca #pilne` – z oboma.
+- **Tablica kanban:** kolumny Do zrobienia / W toku / Zrobione (albo kolumny = listy). Karty przeciągasz myszą, na telefonie przesuwasz strzałkami. Można filtrować po liście i tagu.
 - **Kalendarz Google:**
   - widzisz swoje wydarzenia obok zadań;
   - zadania z terminem trafiają do osobnego kalendarza **„Zadania”** z przypomnieniem, więc telefon powiadomi Cię przez aplikację Kalendarz Google, nawet gdy ta apka jest zamknięta.
@@ -24,7 +26,7 @@ Aplikacja do zadań i notatek z kalendarzem. Działa na Windows i Androidzie jak
 | `raport 2h co tydzień pon` | poniedziałek, 2 godz., co tydzień |
 | `za 3 dni oddać książkę` | za 3 dni |
 | `ważna rzecz !` | z gwiazdką |
-| `#praca telefon do klienta` | do listy „Praca” |
+| `#praca telefon do klienta` | do listy „Praca”, a jeśli takiej listy nie ma – tag #praca |
 | `n: pomysł na prezent` | notatka |
 
 Skróty klawiszowe na komputerze: `N` przenosi do pola dodawania, `/` do wyszukiwarki, `Esc` zamyka panel.

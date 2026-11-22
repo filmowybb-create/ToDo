@@ -89,7 +89,7 @@ const Store = (() => {
   function newItem(data = {}) {
     const now = Date.now();
     const it = {
-      id: U.uid(), type: 'task', title: '', body: '', listId: 'inbox',
+      id: U.uid(), type: 'task', title: '', body: '', listId: 'inbox', tags: [], status: 'todo',
       due: null, time: null, duration: null, reminder: null, recurrence: '',
       starred: false, done: false, doneAt: null, cal: false,
       createdAt: now, updatedAt: now, deleted: false, ...data,
@@ -115,10 +115,26 @@ const Store = (() => {
     if (!it.done && it.recurrence && it.due) {
       const next = U.nextDue(it.due, it.recurrence);
       const { id: _i, createdAt, updatedAt, doneAt, done, ...copy } = it;
-      created = newItem({ ...copy, due: next, done: false }).id;
+      created = newItem({ ...copy, due: next, done: false, status: 'todo' }).id;
     }
-    update(id, { done: !it.done, doneAt: !it.done ? Date.now() : null });
+    update(id, { done: !it.done, doneAt: !it.done ? Date.now() : null, status: !it.done ? 'done' : 'todo' });
     return created;
+  }
+
+  /** Status na tablicy: todo | doing | done. */
+  const statusOf = it => it.done ? 'done' : (it.status === 'doing' ? 'doing' : 'todo');
+  function setStatus(id, st) {
+    const it = state.items[id]; if (!it) return null;
+    let created = null;
+    if ((st === 'done') !== !!it.done) created = toggleDone(id);
+    if (st !== 'done') update(id, { status: st });
+    return created;
+  }
+  /** Wszystkie tagi z liczbą użyć. */
+  function tags() {
+    const m = new Map();
+    for (const i of items()) for (const t of i.tags || []) m.set(t, (m.get(t) || 0) + 1);
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pl'));
   }
 
   const items = () => Object.values(state.items).filter(i => !i.deleted);
@@ -180,7 +196,7 @@ const Store = (() => {
     get state() { return state; },
     get settings() { return state.settings; },
     get local() { return state.local; },
-    items, get, newItem, update, remove, toggleDone,
+    items, get, newItem, update, remove, toggleDone, statusOf, setStatus, tags,
     lists, addList, updateList, removeList, firstListId,
     setSettings, exportData, importData, merge, differsFrom,
   };
