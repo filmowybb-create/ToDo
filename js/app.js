@@ -821,8 +821,10 @@ function openSettings() {
       </div>
       <div class="field-row">
         <div class="field"><label for="sHour">Kalendarz przewija się do</label><select class="inp" id="sHour">${[5, 6, 7, 8, 9].map(h => `<option value="${h}" ${h === S.weekStartHour ? 'selected' : ''}>${h}:00</option>`).join('')}</select></div>
-        <div class="field"><label for="sTheme">Motyw</label><select class="inp" id="sTheme">${[['auto', 'Jak w systemie'], ['light', 'Jasny'], ['dark', 'Ciemny']].map(([v, l]) => `<option value="${v}" ${v === S.theme ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="field"><label for="sTheme">Tryb</label><select class="inp" id="sTheme">${[['auto', 'Jak w systemie'], ['light', 'Jasny'], ['dark', 'Ciemny']].map(([v, l]) => `<option value="${v}" ${v === S.theme ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       </div>
+      <div class="field"><span class="flabel">Kolor motywu</span>
+        <div class="swatches" id="sAccent" role="radiogroup" aria-label="Kolor motywu">${ACCENTS.map(([c, n]) => `<button class="swatch ${c === (S.accent || '#2563eb') ? 'on' : ''}" style="--c:${c}" data-c="${c}" title="${n}" aria-label="${n}" role="radio" aria-checked="${c === (S.accent || '#2563eb')}">${ic('check')}</button>`).join('')}</div></div>
     </div>
     <div class="set-sec"><h3>Powiadomienia z aplikacji</h3>
       <p>Działają, gdy aplikacja jest otwarta lub działa w tle. Przypomnienia, które przyjdą zawsze, nawet przy wyłączonej aplikacji, daje Kalendarz Google (sekcja wyżej).</p>
@@ -856,6 +858,11 @@ function openSettings() {
       on('#sRem', 'change', e => Store.setSettings({ defaultReminder: e.target.value === '' ? null : +e.target.value }));
       on('#sHour', 'change', e => Store.setSettings({ weekStartHour: +e.target.value }));
       on('#sTheme', 'change', e => { Store.setSettings({ theme: e.target.value }); applyTheme(); });
+      on('#sAccent', 'click', e => {
+        const b = e.target.closest('[data-c]'); if (!b) return;
+        Store.setSettings({ accent: b.dataset.c }); applyTheme();
+        $$('.swatch', w).forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); });
+      });
       on('#sNotif', 'change', async e => {
         if (e.target.checked) {
           if (!('Notification' in self)) { toast('Ta przeglądarka nie obsługuje powiadomień'); e.target.checked = false; return; }
@@ -891,9 +898,18 @@ function openSettings() {
     },
   });
 }
+const ACCENTS = [
+  ['#2563eb', 'Niebieski'], ['#0284c7', 'Błękitny'], ['#0891b2', 'Cyjan'], ['#0d9488', 'Morski'],
+  ['#059669', 'Szmaragdowy'], ['#16a34a', 'Zielony'], ['#65a30d', 'Limonkowy'], ['#ca8a04', 'Żółty'],
+  ['#d97706', 'Bursztynowy'], ['#ea580c', 'Pomarańczowy'], ['#dc2626', 'Czerwony'], ['#e11d48', 'Malinowy'],
+  ['#db2777', 'Różowy'], ['#9333ea', 'Purpurowy'], ['#4f46e5', 'Indygo'], ['#475569', 'Grafitowy'],
+];
 function applyTheme() {
-  const t = Store.settings.theme;
-  if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  const S = Store.settings, root = document.documentElement;
+  if (S.theme === 'auto') delete root.dataset.theme; else root.dataset.theme = S.theme;
+  const a = S.accent || '#2563eb';
+  root.style.setProperty('--accent-base', a);
+  const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.content = a;
 }
 
 /* =================================================================

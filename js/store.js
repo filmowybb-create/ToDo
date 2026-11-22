@@ -19,6 +19,7 @@ const Store = (() => {
     weekStartHour: 7,
     notifications: false,
     theme: 'auto',
+    accent: '#2563eb',
   };
 
   let state = {

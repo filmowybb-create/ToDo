@@ -1,12 +1,12 @@
 :root {
   --bg: #f6f7f9; --panel: #ffffff; --panel2: #f1f3f6; --text: #16181d; --muted: #6b7280; --line: #e4e7ec;
-  --accent: #2563eb; --accent-soft: #e8efff; --danger: #dc2626; --ok: #16a34a; --star: #f59e0b;
+  --accent-base: #2563eb; --accent: var(--accent-base); --accent-soft: color-mix(in srgb, var(--accent) 13%, var(--panel)); --danger: #dc2626; --ok: #16a34a; --star: #f59e0b;
   --radius: 10px; --shadow: 0 8px 30px rgba(16, 24, 40, .12);
   --side-w: 248px; --detail-w: 380px; --hour: 48px;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #111318; --panel: #181b22; --panel2: #20242d; --text: #e8eaee; --muted: #9aa3b2; --line: #2a2f3a; --accent: #5b8cff; --accent-soft: #1f2a44; --shadow: 0 8px 30px rgba(0,0,0,.45); color-scheme: dark; } }
-:root[data-theme="dark"] { --bg: #111318; --panel: #181b22; --panel2: #20242d; --text: #e8eaee; --muted: #9aa3b2; --line: #2a2f3a; --accent: #5b8cff; --accent-soft: #1f2a44; --shadow: 0 8px 30px rgba(0,0,0,.45); color-scheme: dark; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #111318; --panel: #181b22; --panel2: #20242d; --text: #e8eaee; --muted: #9aa3b2; --line: #2a2f3a; --accent: color-mix(in srgb, var(--accent-base) 72%, #fff); --accent-soft: color-mix(in srgb, var(--accent-base) 24%, var(--panel)); --shadow: 0 8px 30px rgba(0,0,0,.45); color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #111318; --panel: #181b22; --panel2: #20242d; --text: #e8eaee; --muted: #9aa3b2; --line: #2a2f3a; --accent: color-mix(in srgb, var(--accent-base) 72%, #fff); --accent-soft: color-mix(in srgb, var(--accent-base) 24%, var(--panel)); --shadow: 0 8px 30px rgba(0,0,0,.45); color-scheme: dark; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -175,6 +175,14 @@ textarea.inp { resize: vertical; min-height: 120px; line-height: 1.5; }
 .blk small { color: var(--muted); }
 .now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--danger); z-index: 3; pointer-events: none; }
 .now-line::before { content: ''; position: absolute; left: -4px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
+
+/* ---------- Kolory motywu ---------- */
+.swatches { display: grid; grid-template-columns: repeat(8, 36px); gap: 10px; margin-top: 4px; }
+.swatch { width: 36px; height: 36px; border-radius: 50%; background: var(--c); display: flex; align-items: center; justify-content: center; color: #fff; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); transition: transform .1s; }
+.swatch:hover { transform: scale(1.1); }
+.swatch.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--c); }
+.swatch svg { width: 18px; height: 18px; stroke-width: 3; opacity: 0; } .swatch.on svg { opacity: 1; }
+@media (max-width: 420px) { .swatches { grid-template-columns: repeat(8, 1fr); gap: 6px; } .swatch { width: 100%; height: auto; aspect-ratio: 1; } }
 
 /* ---------- Tagi ---------- */
 .tag { --th: 220; display: inline-flex; align-items: center; gap: 2px; font-size: 11.5px; font-weight: 600; padding: 0 7px; border-radius: 99px; line-height: 18px; background: hsl(var(--th) 70% 50% / .14); color: hsl(var(--th) 55% 40%); cursor: pointer; white-space: nowrap; }
