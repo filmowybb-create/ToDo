@@ -13,6 +13,7 @@ Aplikacja do zadań i notatek z kalendarzem. Działa na Windows i Androidzie jak
   - widzisz swoje wydarzenia obok zadań;
   - zadania z terminem trafiają do osobnego kalendarza **„Zadania”** z przypomnieniem, więc telefon powiadomi Cię przez aplikację Kalendarz Google, nawet gdy ta apka jest zamknięta.
 - **Synchronizacja** między komputerem a telefonem przez ukryty folder aplikacji na Twoim Dysku Google (nie widać go wśród Twoich plików).
+- **Udostępnianie na Androidzie:** w dowolnej aplikacji wybierz „Udostępnij” → **Zadania**, a strona lub tekst zostanie nowym zadaniem (link trafia do notatki). Działa w zainstalowanej aplikacji.
 - **Offline:** wszystko działa bez internetu i synchronizuje się po powrocie sieci.
 - **Przeciąganie** zadań w kalendarzu (na komputerze), a kliknięcie w pustą godzinę tworzy zadanie na tę godzinę.
 

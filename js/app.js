@@ -1068,6 +1068,22 @@ function bindGlobal() {
 /* =================================================================
    START
    ================================================================= */
+/** Odbiór treści z menu „Udostępnij” na telefonie (Web Share Target). */
+function handleShare() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('title') && !q.has('text') && !q.has('url')) return;
+  history.replaceState(null, '', location.pathname);
+  let title = (q.get('title') || '').trim(), text = (q.get('text') || '').trim(), url = (q.get('url') || '').trim();
+  if (!url) { const m = text.match(/https?:\/\/\S+/); if (m) { url = m[0]; text = text.replace(m[0], '').trim(); } }
+  if (text === title) text = '';
+  if (!title) title = text.split('\n')[0].slice(0, 120) || url.replace(/^https?:\/\/(www\.)?/, '').split(/[/?#]/)[0] || 'Udostępnione';
+  if (text.startsWith(title)) text = text.slice(title.length).trim();
+  const body = [text, url].filter(Boolean).join('\n');
+  if (!title && !body) return;
+  const it = Store.newItem({ title, body });
+  setTimeout(() => { openDetail(it.id); toast('Dodano z udostępniania – wybierz zadanie lub notatkę'); }, 50);
+}
+
 async function start() {
   await Store.load();
   applyTheme();
@@ -1079,6 +1095,7 @@ async function start() {
     if (kind === 'items' || kind === 'lists') scheduleSync();
   });
   render();
+  handleShare();
   const m = location.hash.match(/item=([0-9a-v]+)/);
   if (m && Store.get(m[1])) { openDetail(m[1]); history.replaceState(null, '', location.pathname); }
   if (Store.settings.googleOn) { G.preload(); syncNow(false); }
