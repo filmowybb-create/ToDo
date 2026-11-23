@@ -79,7 +79,7 @@ Na każdym urządzeniu połącz się z Google (ten sam Client ID). Dane same si�
 ## Dobrze wiedzieć
 
 - **Przypomnienia.** Najpewniejsze są te z Kalendarza Google, bo przychodzą zawsze. Powiadomienia samej aplikacji (Ustawienia → Powiadomienia) działają, gdy jest otwarta. Jeśli włączysz oba rodzaje, możesz dostać dwa powiadomienia o tym samym zadaniu.
-- **Sesja Google trwa godzinę.** Po tym czasie, gdy otworzysz aplikację, pojawi się pasek „Połącz”. Jedno dotknięcie wystarczy, bez wpisywania hasła. Do tego momentu wszystko zapisuje się lokalnie. To ograniczenie aplikacji bez własnego serwera.
+- **Sesja Google trwa godzinę,** ale aplikacja odnawia ją sama: po wygaśnięciu (lub 5 minut przed) pierwsze dotknięcie ekranu otwiera na moment okno Google, które samo się zamyka – nic nie trzeba klikać. Gdyby to się nie udało, pojawi się pasek „Połącz”.
 - **Zadania cykliczne:** po odhaczeniu tworzy się kolejne wystąpienie z następnym terminem.
 - **Przypomnienie „w dniu terminu o 9:00”** dla zadań bez godziny działa tylko w aplikacji, bo Kalendarz Google nie obsługuje tego dla wydarzeń całodniowych. Dla przypomnień w Kalendarzu wybierz „dzień wcześniej”.
 - **Kopia zapasowa:** Ustawienia → Eksportuj zapisuje cały stan do pliku JSON.

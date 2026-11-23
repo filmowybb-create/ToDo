@@ -9,6 +9,7 @@ const Store = (() => {
   const DEFAULT_SETTINGS = {
     clientId: '842853255553-pocp3184gghftlifk37u9gahcnjf92f6.apps.googleusercontent.com', // OAuth Client ID z Google Cloud
     googleOn: false,
+    googleEmail: '',      // podpowiedź konta przy odnawianiu sesji
     showCalendars: ['primary'],
     taskCalendarId: '',      // kalendarz "Zadania" tworzony automatycznie
     pushToCalendar: true,

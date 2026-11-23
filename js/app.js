@@ -176,7 +176,7 @@ function renderSyncStatus() {
   el.innerHTML = `<span class="led"></span><span>${txt}</span>`;
   const b = $('#banner');
   b.innerHTML = S.googleOn && s.status === 'auth'
-    ? `<div class="banner">${ic('google', 'fill')}<span>Sesja Google wygasła. Zmiany są zapisane lokalnie.</span><button class="btn primary" id="reauth">Połącz</button></div>` : '';
+    ? `<div class="banner">${ic('google', 'fill')}<span>Sesja Google wygasła – dotknij dowolnego miejsca, żeby odnowić. Zmiany są zapisane lokalnie.</span><button class="btn primary" id="reauth">Połącz</button></div>` : '';
   if (b.firstChild) $('#reauth').onclick = () => syncNow(true);
 }
 
@@ -889,7 +889,7 @@ function openSettings() {
         } catch (err) { toast('Nie udało się połączyć: ' + err.message, null, null, 6000); }
       });
       on('#sSync', 'click', () => syncNow(true));
-      on('#sDisc', 'click', () => { G.signOut(); Store.setSettings({ googleOn: false }); ui.sync.status = 'off'; ui.ev = { key: '', at: 0, list: [], loading: false }; close(); render(); toast('Rozłączono z Google. Dane zostały na urządzeniu.'); });
+      on('#sDisc', 'click', () => { G.signOut(); Store.setSettings({ googleOn: false, googleEmail: '' }); ui.sync.status = 'off'; ui.ev = { key: '', at: 0, list: [], loading: false }; close(); render(); toast('Rozłączono z Google. Dane zostały na urządzeniu.'); });
       on('#sPush', 'change', e => { Store.setSettings({ pushToCalendar: e.target.checked }); scheduleSync(); });
       on('#sRmDone', 'change', e => { Store.setSettings({ removeDoneFromCalendar: e.target.checked }); scheduleSync(); });
       on('#sDur', 'change', e => Store.setSettings({ defaultDuration: +e.target.value }));
@@ -975,6 +975,24 @@ function syncNow(interactive) {
   })().finally(() => { syncPromise = null; });
   return syncPromise;
 }
+/* Automatyczne odnawianie sesji Google: przy pierwszym dotknięciu/kliknięciu, gdy token wygasł
+   albo wygaśnie w ciągu 5 minut. Okno Google pojawia się na chwilę i samo się zamyka. */
+let reauthBusy = false, lastReauth = 0;
+function autoReauth(e) {
+  const S = Store.settings;
+  if (!S.googleOn || !navigator.onLine || reauthBusy) return;
+  if (e.target && e.target.closest && e.target.closest('#reauth, #syncStatus, #sConnect, #sDisc')) return;
+  if (G.expiresIn() > 5 * 60000 || Date.now() - lastReauth < 60000) return;
+  reauthBusy = true; lastReauth = Date.now();
+  const wasExpired = !G.hasValidToken();
+  G.getToken(true, true)
+    .then(() => { if (wasExpired) toast('Odnowiono połączenie z Google'); syncNow(false); })
+    .catch(err => { console.warn('Odnowienie sesji Google nie powiodło się', err); if (!G.hasValidToken()) setSync('auth'); })
+    .finally(() => { reauthBusy = false; });
+}
+document.addEventListener('click', autoReauth, true);
+document.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key.length === 1) autoReauth(e); }, true);
+
 const scheduleSync = U.debounce(() => { if (Store.settings.googleOn && G.hasValidToken()) syncNow(false); }, 3000);
 
 /* =================================================================

@@ -47,13 +47,20 @@ const G = (() => {
   const hasValidToken = () => !!(token && token.exp > Date.now());
 
   /** Zwraca token. Bez interactive nie otwiera okna – rzuca NeedAuth. */
-  async function getToken(interactive = false) {
-    if (hasValidToken()) return token.access;
+  /** Ile ms zostało do wygaśnięcia tokenu (0, jeśli brak). */
+  const expiresIn = () => (token ? Math.max(0, token.exp - Date.now()) : 0);
+
+  /** Zwraca token. Bez interactive nie otwiera okna – rzuca NeedAuth. force – odnawia przed czasem. */
+  async function getToken(interactive = false, force = false) {
+    if (!force && hasValidToken()) return token.access;
     if (!interactive) throw new NeedAuth();
     await init();
+    if (pending) pending.rej(new Error('Przerwane przez nowe logowanie'));
     return new Promise((res, rej) => {
       pending = { res, rej };
-      tokenClient.requestAccessToken({ prompt: Store.settings.googleOn ? '' : 'consent' });
+      const opts = { prompt: Store.settings.googleOn ? '' : 'consent' };
+      if (Store.settings.googleEmail) opts.login_hint = Store.settings.googleEmail;
+      tokenClient.requestAccessToken(opts);
     });
   }
 
@@ -127,6 +134,8 @@ const G = (() => {
     if (calListCache && !force) return calListCache;
     const r = await api(`${CAL}/users/me/calendarList?minAccessRole=reader&maxResults=250`);
     calListCache = r.items || [];
+    const prim = calListCache.find(c => c.primary);
+    if (prim && prim.id.includes('@') && Store.settings.googleEmail !== prim.id) Store.setSettings({ googleEmail: prim.id });
     return calListCache;
   }
 
@@ -237,5 +246,5 @@ const G = (() => {
   /** Wczytuje bibliotekę logowania z wyprzedzeniem, żeby okno logowania nie zostało zablokowane. */
   const preload = () => (Store.settings.clientId ? init().catch(() => { }) : Promise.resolve());
 
-  return { preload, getToken, hasValidToken, signOut, syncData, listCalendars, listEvents, pushTasks, ensureTaskCalendar, NeedAuth, TZ };
+  return { preload, getToken, hasValidToken, expiresIn, signOut, syncData, listCalendars, listEvents, pushTasks, ensureTaskCalendar, NeedAuth, TZ };
 })();
