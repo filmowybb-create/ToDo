@@ -206,7 +206,7 @@ function render() {
     case 'upcoming': title = 'Nadchodzące'; html = viewUpcoming(); break;
     case 'calendar': title = 'Kalendarz'; html = viewCalendar(); break;
     case 'starred': title = 'Ważne'; html = viewSimple(tasks().filter(i => i.starred && !i.done), 'Oznacz zadanie gwiazdką, żeby trafiło tutaj.', 'star'); break;
-    case 'all': title = 'Wszystkie zadania'; html = viewAll(); break;
+    case 'all': title = 'Wszystkie zadania'; tools = `<button class="icon-btn" id="listExport" title="Eksportuj otwarte zadania do pliku .txt">${ic('down')}</button>`; html = viewAll(); break;
     case 'notes': title = 'Notatki'; html = viewNotes(notes()); break;
     case 'kanban': title = 'Tablica'; html = viewKanban(); break;
     case 'tag': {
@@ -222,7 +222,7 @@ function render() {
       const l = Store.state.lists[ui.listId];
       if (!l || l.deleted) { ui.view = 'today'; return render(); }
       title = l.name;
-      tools = `<button class="icon-btn" id="listEdit" title="Zmień nazwę">${ic('edit')}</button><button class="icon-btn" id="listDel" title="Usuń listę">${ic('trash')}</button>`;
+      tools = `<button class="icon-btn" id="listExport" title="Eksportuj otwarte zadania do pliku .txt">${ic('down')}</button><button class="icon-btn" id="listEdit" title="Zmień nazwę">${ic('edit')}</button><button class="icon-btn" id="listDel" title="Usuń listę">${ic('trash')}</button>`;
       html = viewList(l); break;
     }
   }
@@ -1007,7 +1007,52 @@ function checkReminders() {
 /* =================================================================
    ZDARZENIA
    ================================================================= */
+/** Tekst otwartych zadań – jedna lista albo wszystkie listy. */
+function exportText(listId) {
+  const lists = listId ? [Store.state.lists[listId]] : Store.lists();
+  const now = new Date();
+  const head = listId ? `Lista: ${lists[0].name}` : 'Wszystkie otwarte zadania';
+  const out = [head, `Stan na ${now.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}, ${now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`, ''];
+  let total = 0;
+  for (const l of lists) {
+    const T = tasks().filter(i => !i.done && i.listId === l.id).sort(cmpTask);
+    if (!T.length) continue;
+    if (!listId) out.push(`== ${l.name} (${T.length}) ==`, '');
+    for (const it of T) {
+      total++;
+      const meta = [];
+      if (it.due) meta.push(U.fmtDate(it.due, { full: true, weekday: true }) + (it.time ? ' ' + it.time : ''));
+      if (it.duration) meta.push(U.fmtDur(it.duration));
+      if (it.recurrence) meta.push(U.REC_LABELS[it.recurrence].toLowerCase());
+      if (it.status === 'doing') meta.push('w toku');
+      if (it.starred) meta.push('ważne');
+      if ((it.tags || []).length) meta.push(it.tags.map(t => '#' + t).join(' '));
+      out.push(`[ ] ${it.title || '(bez tytułu)'}${meta.length ? '  —  ' + meta.join(', ') : ''}`);
+      if (it.body) for (const line of it.body.split('\n')) out.push('      ' + line);
+    }
+    out.push('');
+  }
+  if (!total) out.push('Brak otwartych zadań.');
+  else out.push(`Razem: ${total}`);
+  return out.join('\r\n');
+}
+function downloadText(name, text) {
+  const blob = new Blob(['\ufeff' + text], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+const fileSafe = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l').replace(/Ł/g, 'L').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'lista';
+
 function bindListTools() {
+  const x = $('#listExport');
+  if (x) x.onclick = () => {
+    const id = ui.view === 'list' ? ui.listId : null;
+    const name = `zadania-${id ? fileSafe(Store.state.lists[id].name) : 'wszystkie'}-${U.todayStr()}.txt`;
+    downloadText(name, exportText(id));
+    toast('Zapisano plik ' + name);
+  };
   const e = $('#listEdit'), d = $('#listDel');
   if (e) e.onclick = async () => { const l = Store.state.lists[ui.listId]; const n = await askText('Zmień nazwę listy', l.name); if (n) Store.updateList(l.id, { name: n }); };
   if (d) d.onclick = async () => {
